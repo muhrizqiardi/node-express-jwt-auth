@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const bcrypt = require('bcryptjs');
-const {isEmail} = require('validator');
+const { isEmail } = require('validator');
 
 const userSchema = new Schema({
   email: {
@@ -32,6 +32,26 @@ userSchema.post('save', function (doc, next) {
   console.log("new user created", doc);
   next();
 });
+
+//// Model static method
+userSchema.statics.login = async function (email, password) {
+
+  // find a data with the same email in db
+  const user = await this.findOne({ email });
+
+  // if user exists
+  if (user) {
+
+    // compare user entered password and password from database
+    const auth = await bcrypt.compare(password, user.password);
+
+    if (auth) {
+      return user;
+    } else throw Error('incorrect password') // if the password is not matched
+
+  }
+  throw Error('incorrect email') // if the email didn't found on the database
+}
 
 const User = mongoose.model('user', userSchema)
 module.exports = User;

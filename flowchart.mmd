@@ -1,0 +1,7 @@
+graph LR;
+  signup["/signup"];
+  login["/login"];
+
+  fr("Sign up form")-- submitted -->fetch(fetch POST /signup);
+  fetch-- POST -->signup-- "jwt cookies" -->fetch;
+  signup-->

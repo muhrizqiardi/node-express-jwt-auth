@@ -1,15 +1,25 @@
 const User = require("../models/User");
 const cookie = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const { create } = require("../models/User");
 require('dotenv').config();
-const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY; 
+const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
 const MAX_AGE = 3 * 24 * 60 * 60;
 
 // Handle errors
 const handleErrors = (err) => {
-  console.log(err.message, err.code);
+  console.log(err.message, err.code ? err.code : "");
   let errors = { email: '', password: '' };
 
+  // incorrect email
+  if (err.message === 'incorrect email') {
+    errors.email = "The email is not registered";
+  }
+
+  // incorrect password
+  if (err.message === 'incorrect password') {
+    errors.password = "The password is incorrect";
+  }
 
   // duplicate email error
   if (err.code === 11000) {
@@ -17,16 +27,13 @@ const handleErrors = (err) => {
     return errors;
   }
 
-
-  // validation errors
+  // email validation errors
   if (err.message.includes('user validation failed')) {
-    // console.log(err);
     Object.values(err.errors).forEach(({ properties }) => {
-      // console.log(val);
-      // console.log(properties);
       errors[properties.path] = properties.message;
     });
   }
+
   return errors;
 }
 
@@ -45,10 +52,24 @@ module.exports.loginGet = (req, res) => {
 };
 
 // Log in post
-module.exports.loginPost = (req, res) => {
+module.exports.loginPost = async (req, res) => {
   const { email, password } = req.body;
-  console.log(email, password);
-  res.send('login');
+  console.log(req.body)
+  try {
+    const user = await User.login(email, password);
+
+    // Create JWT token & cookie
+    const token = createToken(user._id);
+    res.cookie('jwt', token, { httpOnly: true, maxAge: MAX_AGE * 1000 });
+
+    // Send user JSON 
+    res.status(200).json({user: user._id}).send();
+    
+  } catch (err) {
+    const errors = handleErrors(err)
+    res.status(400).json({errors});
+  }
+
 };
 
 // Sign up page
@@ -64,8 +85,8 @@ module.exports.signupPost = async (req, res) => {
 
     const user = await User.create({ email, password });
     const token = createToken(user._id);
-    res.cookie('jwt', token, {httpOnly: true, maxAge: MAX_AGE * 1000});
-    res.status(201).json(user).send();
+    res.cookie('jwt', token, { httpOnly: true, maxAge: MAX_AGE * 1000 });
+    res.status(201).json({ user }).send();
 
   } catch (err) {
 
