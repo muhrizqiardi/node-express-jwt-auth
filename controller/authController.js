@@ -46,6 +46,12 @@ const createToken = (id) => {
 
 //// Controllers
 
+// Log out
+module.exports.logoutGet = (req, res) => {
+  res.cookie('jwt', '', {maxAge: 1});
+  res.redirect("/")
+}
+
 // Log in page
 module.exports.loginGet = (req, res) => {
   res.render('login')
